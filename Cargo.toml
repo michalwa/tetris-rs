@@ -1,0 +1,9 @@
+[package]
+name = "tetris-rs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+lazy_static = "1.4"
+piston_window = "0.121"
+rand = "0.8"
