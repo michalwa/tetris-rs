@@ -2,6 +2,7 @@ use crate::{grid::Grid, tetromino::*, BLOCK_SIZE, math::Rotation};
 use piston_window::*;
 use rand::prelude::*;
 
+#[derive(Clone)]
 struct FallingTetromino {
     tetromino: &'static Grid,
     col: isize,
@@ -63,7 +64,38 @@ impl FallingTetromino {
     }
 
     fn rotate(&mut self, board: &Grid) {
-        self.rotation = self.rotation.rotate_90deg_right();
+        let mut new = self.clone();
+        new.rotation = new.rotation.rotate_90deg_right();
+
+        // minimum column offset required for the tetromino not to collide with walls
+        let mut dx = 0;
+
+        for (i, j, falling_block) in new.tetromino.cell_indices() {
+            let [i, _] = new.local_to_global([i as isize, j as isize]);
+
+            if falling_block.is_some() {
+                if i < 0 {
+                    dx = dx.max(-i);
+                }
+
+                if i >= board.cols() as isize {
+                    dx = dx.min(board.cols() as isize - 1 - i);
+                }
+            }
+        }
+
+        new.col += dx;
+
+        // test kicks
+        for (kx, ky) in [(0, 0), (-1, 0), (1, 0), (-1, -1), (0, -1), (1, -1)] {
+            if new.try_move(kx, ky, board) {
+                *self = new;
+                return;
+            }
+        }
+
+        // if none of the kicks worked, *self is not assigned to and the rotation
+        // is not performed
     }
 }
 
