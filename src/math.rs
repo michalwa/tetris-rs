@@ -59,7 +59,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_inverse() {
+    fn inverse() {
         let id = Rotation([
             [1, 0],
             [0, 1],
@@ -79,7 +79,7 @@ mod test {
     }
 
     #[test]
-    fn test_mul_vec() {
+    fn mul_vec() {
         let m = Rotation([
             [1, 2],
             [3, 4],
@@ -88,7 +88,7 @@ mod test {
     }
 
     #[test]
-    fn test_mul_mat() {
+    fn mul_mat() {
         let m1 = Rotation([
             [3, 4],
             [5, 6],
@@ -104,7 +104,7 @@ mod test {
     }
 
     #[test]
-    fn test_rotate_90deg_right() {
+    fn rotate_90deg_right() {
         let mut m = Rotation::identity();
 
         m = m.rotate_90deg_right();
