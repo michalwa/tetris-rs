@@ -10,35 +10,46 @@ struct FallingTetromino {
 }
 
 impl FallingTetromino {
-    fn get(&self, i: usize, j: usize) -> Option<&Block> {
+    fn local_to_global(&self, [i, j]: [isize; 2]) -> [isize; 2] {
+        // Transpose to middle & invert rotation
+        let [i, j] = self.rotation.inverse() * [
+            i as isize - self.tetromino.cols() as isize / 2,
+            j as isize - self.tetromino.rows() as isize / 2,
+        ];
+        // Transpose back and transpose by tetromino position
+        [
+            i + self.tetromino.cols() as isize / 2 + self.col,
+            j + self.tetromino.rows() as isize / 2 + self.row,
+        ]
+    }
+
+    fn global_to_local(&self, [i, j]: [isize; 2]) -> [isize; 2] {
+        // Convert to local coordinates, transpose to middle & rotate
         let [i, j] = self.rotation * [
             i as isize - self.col - self.tetromino.cols() as isize / 2,
             j as isize - self.row - self.tetromino.rows() as isize / 2,
         ];
-        self.tetromino.get(
+        // Transpose back
+        [
             i + self.tetromino.cols() as isize / 2,
             j + self.tetromino.rows() as isize / 2,
-        )
+        ]
+    }
+
+    fn get(&self, i: usize, j: usize) -> Option<&Block> {
+        let [i, j] = self.global_to_local([i as isize, j as isize]);
+        self.tetromino.get(i, j)
     }
 
     fn try_move(&mut self, dx: isize, dy: isize, board: &Grid) -> bool {
         for (i, j, falling_block) in self.tetromino.cell_indices() {
-            let [i, j] = self.rotation.inverse() * [
-                i as isize - self.col - self.tetromino.cols() as isize / 2,
-                j as isize - self.row - self.tetromino.rows() as isize / 2,
-            ];
-            let [i, j] = [
-                i + self.col + self.tetromino.cols() as isize / 2,
-                j + self.row + self.tetromino.rows() as isize / 2,
-            ];
+            let [i, j] = self.local_to_global([i as isize, j as isize]);
 
             if falling_block.is_some() {
-                if j as isize + self.row + dy >= board.rows() as isize
-                    || i as isize + self.col + dx < 0
-                    || i as isize + self.col + dx >= board.cols() as isize
-                    || board
-                        .get(i as isize + self.col + dx, j as isize + self.row + dy)
-                        .is_some()
+                if j + dy >= board.rows() as isize
+                    || i + dx < 0
+                    || i + dx >= board.cols() as isize
+                    || board.get(i + dx, j + dy).is_some()
                 {
                     return false;
                 }
@@ -52,7 +63,6 @@ impl FallingTetromino {
     }
 
     fn rotate(&mut self, board: &Grid) {
-        // TODO
         self.rotation = self.rotation.rotate_90deg_right();
     }
 }
@@ -93,17 +103,11 @@ impl Game {
 
     fn persist_tetromino(&mut self, tetromino: FallingTetromino) {
         for (i, j, block) in tetromino.tetromino.cell_indices() {
-            if block.is_some() {
-                debug_assert!(self
-                    .board
-                    .get(i as isize + tetromino.col, j as isize + tetromino.row)
-                    .is_none());
+            let [i, j] = tetromino.local_to_global([i as isize, j as isize]);
 
-                self.board.set(
-                    i as isize + tetromino.col,
-                    j as isize + tetromino.row,
-                    *block,
-                );
+            if block.is_some() {
+                debug_assert!(self.board.get(i, j).is_none());
+                self.board.set(i, j, *block);
             }
         }
     }
@@ -162,5 +166,23 @@ impl Game {
                 rectangle([1.0; 4], rect, c.transform, g);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn tetromino_local_global() {
+        let tetromino = FallingTetromino {
+            col: 123,
+            row: 345,
+            rotation: Rotation::identity().rotate_90deg_right(),
+            tetromino: &STANDARD_TETROMINOS[0],
+        };
+
+        assert_eq!(tetromino.global_to_local(tetromino.local_to_global([0, 0])), [0, 0]);
+        assert_eq!(tetromino.local_to_global(tetromino.global_to_local([0, 0])), [0, 0]);
     }
 }

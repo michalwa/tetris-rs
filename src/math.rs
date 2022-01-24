@@ -43,12 +43,12 @@ impl Mul<Rotation> for Rotation {
     fn mul(self, rhs: Rotation) -> Self::Output {
         Self([
             [
-                rhs.0[0][0] * self.0[0][0] + rhs.0[0][1] * self.0[0][1],
-                rhs.0[1][0] * self.0[0][0] + rhs.0[1][1] * self.0[0][1],
+                rhs.0[0][0] * self.0[0][0] + rhs.0[1][0] * self.0[0][1],
+                rhs.0[0][1] * self.0[0][0] + rhs.0[1][1] * self.0[0][1],
             ],
             [
-                rhs.0[0][0] * self.0[1][0] + rhs.0[0][1] * self.0[1][1],
-                rhs.0[1][0] * self.0[1][0] + rhs.0[1][1] * self.0[1][1],
+                rhs.0[0][0] * self.0[1][0] + rhs.0[1][0] * self.0[1][1],
+                rhs.0[0][1] * self.0[1][0] + rhs.0[1][1] * self.0[1][1],
             ],
         ])
     }
@@ -90,16 +90,42 @@ mod test {
     #[test]
     fn test_mul_mat() {
         let m1 = Rotation([
-            [1, 2],
-            [3, 4],
-        ]);
-        let m2 = Rotation([
             [3, 4],
             [5, 6],
         ]);
+        let m2 = Rotation([
+            [1, 2],
+            [3, 4],
+        ]);
         assert_eq!(m1 * m2, Rotation([
-            [11, 17],
-            [25, 39],
+            [15, 22],
+            [23, 34],
         ]));
+    }
+
+    #[test]
+    fn test_rotate_90deg_right() {
+        let mut m = Rotation::identity();
+
+        m = m.rotate_90deg_right();
+        assert_eq!(m, Rotation([
+            [0, -1],
+            [1, 0],
+        ]));
+
+        m = m.rotate_90deg_right();
+        assert_eq!(m, Rotation([
+            [-1, 0],
+            [0, -1],
+        ]));
+
+        m = m.rotate_90deg_right();
+        assert_eq!(m, Rotation([
+            [0, 1],
+            [-1, 0],
+        ]));
+
+        m = m.rotate_90deg_right();
+        assert_eq!(m, Rotation::identity());
     }
 }
