@@ -23,7 +23,8 @@ fn main() {
         .build()
         .unwrap();
 
-    let mut last_time = Instant::now();
+    let mut tick_interval = 300;
+    let mut last_tick = Instant::now();
 
     while let Some(event) = window.next() {
         window.draw_2d(&event, |c, g, _device| {
@@ -31,8 +32,8 @@ fn main() {
             game.render(c, g);
         });
 
-        if Instant::now() - last_time > Duration::from_millis(300) {
-            last_time = Instant::now();
+        if Instant::now() - last_tick > Duration::from_millis(tick_interval) {
+            last_tick = Instant::now();
             game.handle_event(GameEvent::Tick);
         }
 
@@ -48,8 +49,20 @@ fn main() {
                 Button::Keyboard(Key::A) => game.handle_event(GameEvent::MoveLeft),
                 Button::Keyboard(Key::D) => game.handle_event(GameEvent::MoveRight),
                 Button::Keyboard(Key::W) => game.handle_event(GameEvent::Rotate),
+                Button::Keyboard(Key::S) => tick_interval = 50,
                 _ => {}
-            },
+            }
+            Event::Input(
+                Input::Button(ButtonArgs {
+                    button,
+                    state: ButtonState::Release,
+                    ..
+                }),
+                _,
+            ) => match button {
+                Button::Keyboard(Key::S) => tick_interval = 300,
+                _ => {}
+            }
             _ => {}
         }
     }

@@ -110,6 +110,7 @@ pub enum GameEvent {
 pub struct Game {
     falling: Option<FallingTetromino>,
     board: Grid,
+    over: bool,
 }
 
 impl Game {
@@ -117,6 +118,7 @@ impl Game {
         Self {
             falling: None,
             board: Grid::new(board_size),
+            over: false,
         }
     }
 
@@ -125,12 +127,18 @@ impl Game {
         let tetromino = STANDARD_TETROMINOS.choose(&mut rng).unwrap();
         let col = self.board.cols() / 2 - tetromino.cols() / 2;
 
-        self.falling = Some(FallingTetromino {
+        let tetromino = FallingTetromino {
             tetromino,
             col: col as isize,
             row: -(tetromino.rows() as isize),
             rotation: Rotation::identity(),
-        });
+        };
+
+        if !tetromino.clone().try_move(0, 1, &self.board) {
+            self.over = true;
+        }
+
+        self.falling = Some(tetromino);
     }
 
     fn persist_tetromino(&mut self, tetromino: FallingTetromino) {
@@ -142,9 +150,35 @@ impl Game {
                 self.board.set(i, j, *block);
             }
         }
+
+        // clear blocks
+        let mut j = self.board.rows() as isize;
+        while j >= 0 {
+            if (0..self.board.cols() as isize)
+                .all(|i| self.board.get(i, j).is_some())
+            {
+                // clear row
+                for i in 0..self.board.cols() as isize {
+                    self.board.set(i, j, None);
+                }
+
+                // shift rows down
+                let mut k = j;
+                while k >= 0 {
+                    for i in 0..self.board.cols() as isize {
+                        self.board.set(i, k, self.board.get(i, k - 1).cloned());
+                    }
+                    k -= 1;
+                }
+            } else {
+                j -= 1;
+            }
+        }
     }
 
     pub fn handle_event(&mut self, event: GameEvent) {
+        if self.over { return }
+
         match event {
             GameEvent::Tick => {
                 if let Some(mut tetromino) = self.falling.take() {
@@ -174,11 +208,16 @@ impl Game {
                     tetromino.rotate(&self.board);
                 }
             }
-            _ => {}
         }
     }
 
     pub fn render(&self, c: Context, g: &mut G2d) {
+        let color = if self.over {
+            [1.0, 0.0, 0.0, 1.0]
+        } else {
+            [1.0; 4]
+        };
+
         for (i, j, cell) in self.board.cell_indices() {
             let rect = [
                 i as f64 * BLOCK_SIZE,
@@ -189,13 +228,13 @@ impl Game {
 
             if let Some(tetromino) = &self.falling {
                 if tetromino.get(i, j).is_some() {
-                    rectangle([1.0, 0.0, 0.0, 1.0], rect, c.transform, g);
+                    rectangle([0.0, 1.0, 0.0, 1.0], rect, c.transform, g);
                     continue;
                 }
             }
 
             if cell.is_some() {
-                rectangle([1.0; 4], rect, c.transform, g);
+                rectangle(color, rect, c.transform, g);
             }
         }
     }
